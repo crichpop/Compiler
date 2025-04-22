@@ -48,7 +48,7 @@ public:
     static unsigned int lexPosition;
     static std::string nameValue;
 
-    Scanner(Driver &driver);
+    Scanner(Driver &driver, std::shared_ptr<Error> errorPtr);
     void nextLex();
     void scanName();
     void scanNumber();
@@ -57,6 +57,8 @@ public:
 
 private:
     Driver driver;
+    std::shared_ptr<Error> errorPtr;
+
     // служебные слова
     std::unordered_map<std::string, Lex> lexTable = {
         {"MODULE", Lex::MODULE},

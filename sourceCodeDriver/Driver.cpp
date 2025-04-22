@@ -13,13 +13,14 @@ char Driver::chTab = '\t';
 char Driver::chEOL = '\r';
 char Driver::chEOT = '\0';
 
+Driver::Driver(std::shared_ptr<Error> errorPtr) : errorPtr(std::move(errorPtr)) {}
+
 void Driver::resetText(char const *path) 
 {
     std::ifstream file(path);
 
     if (!file) 
     {
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
         errorPtr->error("Не удалось открыть файл");
     }
 

@@ -13,7 +13,7 @@ add_executable(Compiler
     error/Error.cpp
     scanner/Scanner.cpp
     table/TableOfName.cpp
-    # table/Item.cpp
+    virtualMachine/ovm.cpp
 )
 
 target_include_directories(Compiler PRIVATE ${PROJECT_SOURCE_DIR}/parser/)
@@ -21,3 +21,4 @@ target_include_directories(Compiler PRIVATE ${PROJECT_SOURCE_DIR}/error/)
 target_include_directories(Compiler PRIVATE ${PROJECT_SOURCE_DIR}/sourceCodeDriver/)
 target_include_directories(Compiler PRIVATE ${PROJECT_SOURCE_DIR}/scanner/)
 target_include_directories(Compiler PRIVATE ${PROJECT_SOURCE_DIR}/table/)
+target_include_directories(Compiler PRIVATE ${PROJECT_SOURCE_DIR}/virtualMachine/)

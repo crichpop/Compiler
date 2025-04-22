@@ -6,7 +6,8 @@
 #include "../table/Item.h"
 #include <string>
 
-Parser::Parser(Scanner &scanner, TableOfName &table) : scanner(scanner), table(table) {
+Parser::Parser(Scanner &scanner, std::shared_ptr<Error> errorPtr) : 
+    scanner(scanner), table(), errorPtr(std::move(errorPtr)) {
     scanner.nextLex();
 } 
 
@@ -48,7 +49,8 @@ void Parser::modulePrc()
     // checkLex(Scanner::Lex::NAME);
 
     errorIfNotExpectedLex(Scanner::Lex::NAME);
-    table.newItem(table.moduleItem(scanner.nameValue));
+    std::string moduleName = scanner.nameValue;
+    table.newItem(table.moduleItem(moduleName));
     scanner.nextLex();
     
     checkLex(Scanner::Lex::SEMI);
@@ -75,13 +77,11 @@ void Parser::modulePrc()
     Item item = table.findItem(scanner.nameValue);
     if (item.typeOfItem != "module")
     {
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
         errorPtr->syntaxError("имя модуля");
     }
-    else if (item.name != scanner.nameValue)
+    else if (item.name != moduleName)
     {
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
-        errorPtr->syntaxError("имя модуля" + scanner.nameValue);
+        errorPtr->syntaxError("имя модуля " + scanner.nameValue);
     }
 
     scanner.nextLex();
@@ -159,11 +159,10 @@ int Parser::constExpresionPrc()
 
     if (scanner.lex == Scanner::Lex::NAME)
     {
-        checkLex(Scanner::Lex::NAME);
         Item item = table.findItem(scanner.nameValue);
+        checkLex(Scanner::Lex::NAME);
         if (item.typeOfItem != "const")
         {
-            std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
             errorPtr->contextError("имя модуля");
         }
         else
@@ -179,7 +178,6 @@ int Parser::constExpresionPrc()
     }
     else
     {
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
         errorPtr->syntaxError("имя константы или число");
     }
 }
@@ -206,7 +204,6 @@ void Parser::typePrc()
 
     if (item.typeOfItem != "type")
     {
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
         errorPtr->contextError("Необьявленное имя типа");
     }
 
@@ -268,7 +265,6 @@ void Parser::variableOrCallPrc()
         Item::ItemTypes expressionType = expressionPrc();
         if (item.type != expressionType) 
         {
-            std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
             errorPtr->contextError("Неверный тип при присваивании");
         }
     }
@@ -278,49 +274,38 @@ void Parser::variableOrCallPrc()
         {
             if (item.typeOfItem != "module")
             {
-                std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
                 errorPtr->contextError("Ожидается имя модуля");
             }
             scanner.nextLex();
             // checkLex(Scanner::Lex::NAME);
             errorIfNotExpectedLex(Scanner::Lex::NAME);
             std::string procedureName = item.name + "." + scanner.nameValue;
-            Item procedureItem = table.findItem(procedureName);
-            if (procedureItem.typeOfItem != "procedure")
+            item = table.findItem(procedureName);
+            if (item.typeOfItem != "procedure")
             {
-                std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
                 errorPtr->contextError("Ожидается процедура");
             }
             scanner.nextLex();
         }
         else if (item.typeOfItem != "procedure")
         {
-            std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
             errorPtr->contextError("Ожидается имя процедуры");
         }
 
         if (scanner.lex == Scanner::Lex::LPAR)
         {
             scanner.nextLex();
-            if (scanner.lex != Scanner::Lex::RPAR)
-            {
-                parameterPrc();
-                while (scanner.lex == Scanner::Lex::COMMA)
-                {
-                    scanner.nextLex();
-                    parameterPrc();
-                }
-                checkLex(Scanner::Lex::RPAR);  
-            }
-            else
-            {
-                scanner.nextLex();
-            }
-        }   
+            checkProcParameters(item);
+            checkLex(Scanner::Lex::RPAR);  
+        }
+        else if (item.name != "Out.Ln" && item.name != "In.Open")
+        {
+            errorPtr->contextError("Ожидается скобка");
+        }
+        
     }
     else
     {
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
         errorPtr->contextError("Ожидается имя перменной или процедуры");
     }
 }
@@ -335,14 +320,16 @@ void Parser::variableOrCallPrc()
 void Parser::ifStatementPrc()
 {
     checkLex(Scanner::Lex::IF);
-    expressionPrc();
+    Item::ItemTypes expressionType = expressionPrc();
+    checkBoolType(expressionType);
     checkLex(Scanner::Lex::THEN);
     sequenceStatementsPrc();
 
     while (scanner.lex == Scanner::Lex::ELSIF)
     {
         checkLex(Scanner::Lex::ELSIF);
-        expressionPrc();
+        expressionType = expressionPrc();
+        checkBoolType(expressionType);
         checkLex(Scanner::Lex::THEN);
         sequenceStatementsPrc();
     }
@@ -362,7 +349,8 @@ void Parser::ifStatementPrc()
 void Parser::whileStatementPrc()
 {
     checkLex(Scanner::Lex::WHILE);
-    expressionPrc();
+    Item::ItemTypes expressionType = expressionPrc();
+    checkBoolType(expressionType);
     checkLex(Scanner::Lex::DO);
     sequenceStatementsPrc();
     checkLex(Scanner::Lex::END);
@@ -474,13 +462,12 @@ Item::ItemTypes Parser::multiplierPrc()
         {
             scanner.nextLex();
             checkLex(Scanner::Lex::LPAR);
-            expressionPrc();
+            checkFuncParameters(item);
             checkLex(Scanner::Lex::RPAR);
             return item.type;
         }
         else
         {
-            std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
             errorPtr->contextError("Ожидается константа, имя или функция");
         }
     }
@@ -498,7 +485,6 @@ Item::ItemTypes Parser::multiplierPrc()
     }
     else
     {
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
         errorPtr->syntaxError("Имя, число или '('");
     }
 
@@ -515,7 +501,6 @@ void Parser::contextImportPrc()
     }
     else
     {
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
         errorPtr->contextError("Ожидается модуль `In` или `Out`");
     }
 
@@ -529,6 +514,94 @@ void Parser::contextVarPrc()
     scanner.nextLex();
 }
 
+void Parser::checkProcParameters(Item item) 
+{
+    // if (scanner.lex != Scanner::Lex::RPAR)
+    // {
+    //     parameterPrc();
+    //     while (scanner.lex == Scanner::Lex::COMMA)
+    //     {
+    //         scanner.nextLex();
+    //         parameterPrc();
+    //     }
+    // }
+
+    if (item.name == "HALT")
+    {
+        constExpresionPrc();
+    }
+    else if (item.name == "INC")
+    {
+        errorIsNotVariable();
+        if (scanner.lex == Scanner::Lex::COMMA)
+        {
+            scanner.nextLex();
+            Item::ItemTypes expressionType = expressionPrc();
+            checkIntType(expressionType);
+        }
+    }
+    else if (item.name == "DEC")
+    {  
+        errorIsNotVariable();
+        if (scanner.lex == Scanner::Lex::COMMA)
+        {
+            scanner.nextLex();
+            Item::ItemTypes expressionType = expressionPrc();
+            checkIntType(expressionType);
+        }
+    }
+    else if (item.name == "In.Open")
+    {
+        // skip
+    }
+    else if (item.name == "In.Int")
+    {
+        errorIsNotVariable();
+    }
+    else if (item.name == "Out.Int")
+    {
+        Item::ItemTypes expressionType = expressionPrc();
+        checkIntType(expressionType);
+        checkLex(Scanner::Lex::COMMA);
+        expressionType = expressionPrc();
+        checkIntType(expressionType);
+    }
+    else if (item.name == "Out.Ln")
+    {
+        // skip
+    }
+    else 
+    {
+        errorPtr->contextError("Неизвестная процедура");
+    }
+}
+
+void Parser::checkFuncParameters(Item item)
+{
+    if (item.name == "ABS")
+    {
+        Item::ItemTypes expressionType = expressionPrc();
+        checkIntType(expressionType);
+    }
+    else if (item.name == "MIN")
+    {
+        typePrc();
+    }
+    else if (item.name == "MAX")
+    {
+        typePrc();
+    }
+    else if (item.name == "ODD")
+    {
+        Item::ItemTypes expressionType = expressionPrc();
+        checkIntType(expressionType);
+    }
+    else
+    {
+        errorPtr->contextError("Неизвестная функция");
+    }
+}
+
 void Parser::checkLex(Scanner::Lex lex)
 {
     if (Scanner::lex == lex)
@@ -538,7 +611,6 @@ void Parser::checkLex(Scanner::Lex lex)
     else 
     {
         std::string expected = scanner.getStringNameOfLex(lex);
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
         errorPtr->syntaxError(expected);
     }
 }
@@ -548,7 +620,6 @@ void Parser::errorIfNotExpectedLex(Scanner::Lex lex)
     if (Scanner::lex != lex)
     {
         std::string expected = scanner.getStringNameOfLex(lex);
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
         errorPtr->syntaxError(expected);
     }
 }
@@ -557,7 +628,26 @@ void Parser::checkIntType(Item::ItemTypes type)
 {
     if (type != Item::ItemTypes::Integer)
     {
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
         errorPtr->contextError("Ожидается целый тип");
     }
+}
+
+void Parser::checkBoolType(Item::ItemTypes type)
+{
+    if (type != Item::ItemTypes::Boolean)
+    {
+        errorPtr->contextError("Ожидается логический тип");
+    }
+}
+
+void Parser::errorIsNotVariable() {
+    errorIfNotExpectedLex(Scanner::Lex::NAME);
+    Item paramItem = table.findItem(scanner.nameValue);
+
+    if (paramItem.typeOfItem != "var") 
+    {
+        errorPtr->contextError("Ожидается имя переменной");
+    }
+
+    scanner.nextLex();
 }

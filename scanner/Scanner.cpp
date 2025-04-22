@@ -8,7 +8,8 @@ std::string Scanner::nameValue = "";
 int Scanner::numValue = 0;
 unsigned int Scanner::lexPosition = 0;
 
-Scanner::Scanner(Driver &driver) : driver(driver) {
+Scanner::Scanner(Driver &driver, std::shared_ptr<Error> errorPtr) : 
+    driver(driver), errorPtr(std::move(errorPtr)) {
     driver.nextCh();
 } 
 
@@ -134,7 +135,6 @@ void Scanner::nextLex()
     }
     else
     {
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
         errorPtr->lexError("Недопустимый символ");
     }
 }
@@ -171,7 +171,6 @@ void Scanner::scanNumber()
         } 
         else 
         {
-            std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
             errorPtr->lexError("Число превышает максимально возможное");
         }
 
@@ -202,7 +201,6 @@ void Scanner::skipComment()
 
         if (Driver::ch == Driver::chEOT)
         {
-            std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
             errorPtr->lexError("Нет конца комментария");
         }
         else

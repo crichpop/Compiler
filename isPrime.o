@@ -1,0 +1,19 @@
+MODULE Prime;
+IMPORT
+  Out, In;
+VAR
+  n, d: INTEGER;
+BEGIN
+  In.Open;
+  In.Int(n);
+  d := 2;
+  WHILE n MOD d # 0 DO
+    d := d + 1;
+  END;
+  IF d = n THEN
+    Out.Int(n, 0)
+  ELSE
+    Out.Int(0, 0)
+  END;
+  Out.Ln();
+END Prime.

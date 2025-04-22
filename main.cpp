@@ -3,26 +3,30 @@
 #include "parser/Parser.h"
 #include "error/Error.h"
 #include "scanner/Scanner.h"
+#include "virtualMachine/ovm.h"
 
 int main(int argc, char const *argv[])
 {   
     std::cout << "Компилятор языка O" << std::endl;
-    Driver driver;
+    std::shared_ptr<Error> errorPtr = std::make_shared<Error>();
+    Driver driver(errorPtr);
 
     if (argc < 2) 
     {
-        std::unique_ptr<Error> errorPtr = std::make_unique<Error>(); 
         errorPtr->error("В качестве аргумента должен быть указан файл *.o");
     }
 
     driver.resetText(argv[1]);
 
-    Scanner scanner(driver);
-    TableOfName table;
-    Parser parser(scanner, table);
+    Scanner scanner(driver, errorPtr);
+    Parser parser(scanner, errorPtr);
     parser.compile();
 
     std::cout << "Скомпилировано";
+
+    OVM ovm;
+    ovm.test_input();
+    ovm.run();
 
     return 0;
 }

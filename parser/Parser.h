@@ -6,11 +6,12 @@
 class Parser
 {
 public:
-    Parser(Scanner &scanner, TableOfName &table);
+    Parser(Scanner &scanner, std::shared_ptr<Error> errorPtr);
     void compile();
 
 private:
     Scanner scanner;
+    std::shared_ptr<Error> errorPtr;
     TableOfName table;
 
     void modulePrc();
@@ -33,9 +34,13 @@ private:
 
     void contextImportPrc();
     void contextVarPrc();
+    void checkProcParameters(Item item);
+    void checkFuncParameters(Item item);
 
     void checkLex(Scanner::Lex lex);
     void errorIfNotExpectedLex(Scanner::Lex lex);
     void checkIntType(Item::ItemTypes type);
+    void checkBoolType(Item::ItemTypes type);
+    void errorIsNotVariable();
 };
 

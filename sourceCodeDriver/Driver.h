@@ -1,9 +1,13 @@
 #include "iostream"
+#include "../error/Error.h"
+
 #pragma once
 
 class Driver
 {
 public:
+    Driver(std::shared_ptr<Error> errorPtr);
+    
     static char ch;
     static unsigned int line;
     static unsigned int position;
@@ -18,4 +22,5 @@ public:
 
 private:
     static std::vector<char> inputChain;
+    std::shared_ptr<Error> errorPtr;
 };
