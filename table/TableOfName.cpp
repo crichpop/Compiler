@@ -30,14 +30,14 @@ void TableOfName::newItem(const Item&  item)
     }
 }
 
-Item& TableOfName::findItem(std::string name)
+Item* TableOfName::findItem(std::string name)
 {
     for (auto it = table.rbegin(); it != table.rend(); ++it)
     {
         auto& block = *it;
         if (block.find(name) != block.end())
         {
-            return block[name];
+            return &block[name];
         }
     }
 
@@ -97,4 +97,18 @@ Item TableOfName::procedureItem(std::string name)
     item.name = name;
     item.typeOfItem = "procedure";
     return item;
+}
+
+std::vector<std::reference_wrapper<Item>> TableOfName::getVars()
+{
+    std::vector<std::reference_wrapper<Item>> vars;
+    std::unordered_map<std::string, Item>& lastScope = table.back();
+    
+    for (auto& [name, item] : lastScope) {
+        if (item.typeOfItem == "var") {
+            vars.push_back(item);
+        }
+    }
+
+    return vars;
 }

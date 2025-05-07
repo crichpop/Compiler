@@ -14,6 +14,7 @@ add_executable(Compiler
     scanner/Scanner.cpp
     table/TableOfName.cpp
     virtualMachine/ovm.cpp
+    virtualMachine/generateCode.cpp
 )
 
 target_include_directories(Compiler PRIVATE ${PROJECT_SOURCE_DIR}/parser/)

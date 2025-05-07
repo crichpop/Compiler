@@ -1,5 +1,6 @@
 #include "../scanner/Scanner.h"
 #include "../table/TableOfName.h"
+#include "../virtualMachine/generateCode.h"
 
 #pragma once
 
@@ -13,6 +14,7 @@ private:
     Scanner scanner;
     std::shared_ptr<Error> errorPtr;
     TableOfName table;
+    GenerateCode generateCode;
 
     void modulePrc();
     void importPrc();
@@ -31,6 +33,8 @@ private:
     Item::ItemTypes simpleExpressionPrc();
     Item::ItemTypes termPrc();
     Item::ItemTypes multiplierPrc();
+
+    void loccateVariables();
 
     void contextImportPrc();
     void contextVarPrc();

@@ -4,6 +4,7 @@
 #include "error/Error.h"
 #include "scanner/Scanner.h"
 #include "virtualMachine/ovm.h"
+#include "virtualMachine/generateCode.h"
 
 int main(int argc, char const *argv[])
 {   
@@ -23,10 +24,6 @@ int main(int argc, char const *argv[])
     parser.compile();
 
     std::cout << "Скомпилировано";
-
-    OVM ovm;
-    ovm.test_input();
-    ovm.run();
 
     return 0;
 }

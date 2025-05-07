@@ -10,6 +10,40 @@ VAR
   n, c, i, d : INTEGER;
 
 BEGIN
+
+  Out.Int(MIN(INTEGER), 20);
+  Out.Ln();
+  Out.Ln;
+
+  n := 10;
+  WHILE n > 0 DO
+    Out.Int(n, 4);
+    DEC(n);
+  END;
+
+  Out.Ln;
+
+  d := 12;
+  WHILE d > 0 DO
+    Out.Int(d, 4);
+    DEC(d);
+  END;
+
+  Out.Ln;
+  n := 1;
+  IF n = 1 THEN
+    Out.Int(11, 0);
+  ELSIF n = 2 THEN
+    Out.Int(22, 0);
+  ELSIF n = 3 THEN
+    Out.Int(33, 0);
+  ELSE
+    Out.Int(44, 0);
+  END;
+
+
+  HALT(-1);
+
   In.Open;
   In.Int(n);
   c := 0;  (* Счетчик простых *)
@@ -32,5 +66,9 @@ BEGIN
 
   Out.Ln;
   Out.Int(c, 0);
+  Out.Int(ABS(12), 0);
+  Out.Int(ABS(-34), 0);
+  Out.Int(MAX(INTEGER), 0);
+  Out.Int(MIN(INTEGER), 0);
 
 END Primes.

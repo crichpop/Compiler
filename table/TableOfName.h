@@ -10,7 +10,8 @@ public:
     void closeScope();
     void addItem(const Item& item);
     void newItem(const Item& item);
-    Item& findItem(std::string);
+    Item* findItem(std::string);
+    std::vector<std::reference_wrapper<Item>> getVars();
 
     Item moduleItem(std::string name);
     Item constItem(std::string name, Item::ItemTypes type, std::string value);

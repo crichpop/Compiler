@@ -4,10 +4,12 @@
 #include "../error/Error.h"
 #include "../table/TableOfName.h"
 #include "../table/Item.h"
+#include "../virtualMachine/generateCode.h"
+
 #include <string>
 
 Parser::Parser(Scanner &scanner, std::shared_ptr<Error> errorPtr) : 
-    scanner(scanner), table(), errorPtr(std::move(errorPtr)) {
+    scanner(scanner), table(), errorPtr(std::move(errorPtr)), generateCode() {
     scanner.nextLex();
 } 
 
@@ -35,6 +37,9 @@ void Parser::compile()
 
     table.closeScope();
     table.closeScope();
+
+    generateCode.printCode();
+    generateCode.runCode();
 }
 
 // MODULE Имя ";"
@@ -46,19 +51,14 @@ void Parser::compile()
 void Parser::modulePrc() 
 {
     checkLex(Scanner::Lex::MODULE);
-    // checkLex(Scanner::Lex::NAME);
-
     errorIfNotExpectedLex(Scanner::Lex::NAME);
     std::string moduleName = scanner.nameValue;
     table.newItem(table.moduleItem(moduleName));
     scanner.nextLex();
-    
     checkLex(Scanner::Lex::SEMI);
 
     if (scanner.lex == Scanner::Lex::IMPORT)
     {
-        // IMPORT опциональный
-        // распознающая процедура для нетерминала IMPORT
         importPrc();
     }
 
@@ -71,22 +71,39 @@ void Parser::modulePrc()
     }
 
     checkLex(Scanner::Lex::END);
-    // checkLex(Scannerx::Lex::NAME);
-
     errorIfNotExpectedLex(Scanner::Lex::NAME);
-    Item item = table.findItem(scanner.nameValue);
-    if (item.typeOfItem != "module")
+    Item* item = table.findItem(scanner.nameValue);
+    if (item->typeOfItem != "module")
     {
         errorPtr->syntaxError("имя модуля");
     }
-    else if (item.name != moduleName)
+    else if (item->name != moduleName)
     {
         errorPtr->syntaxError("имя модуля " + scanner.nameValue);
     }
 
     scanner.nextLex();
     checkLex(Scanner::Lex::DOT);
-    
+    generateCode.genSTOP();
+    loccateVariables();
+}
+
+void Parser::loccateVariables()
+{
+    auto vars = table.getVars();
+    generateCode.gen(generateCode.getCmdCounter());
+    std::reverse(vars.begin(), vars.end());
+    for (Item& var : vars)
+    {
+        if (std::stoi(var.addr) > 0) {
+            generateCode.fillGaps(std::stoi(var.addr));
+            generateCode.gen(0); // Увеличили cmdCounter на 1
+        }
+        else
+        {
+            std::cout << "Переменна `" << var.name << "` объявлена, но не используется" << std::endl;
+        }
+    }
 }
 
 // IMPORT Имя {"," Имя} ";".
@@ -94,11 +111,9 @@ void Parser::importPrc()
 {
     checkLex(Scanner::Lex::IMPORT);
     contextImportPrc();
-    // checkLex(Scanner::Lex::NAME);
     while (scanner.lex == Scanner::Lex::COMMA) {
         checkLex(Scanner::Lex::COMMA);
         contextImportPrc();
-        // checkLex(Scanner::Lex::NAME);
     }
     checkLex(Scanner::Lex::SEMI);
 }
@@ -130,7 +145,6 @@ void Parser::sequenceDeclarationsPrc()
 
 void Parser::constDeclarationPrc()
 {
-    // checkLex(Scanner::Lex::NAME);
     errorIfNotExpectedLex(Scanner::Lex::NAME);
     std::string constName = scanner.nameValue;
     scanner.nextLex();
@@ -159,15 +173,15 @@ int Parser::constExpresionPrc()
 
     if (scanner.lex == Scanner::Lex::NAME)
     {
-        Item item = table.findItem(scanner.nameValue);
+        Item* item = table.findItem(scanner.nameValue);
         checkLex(Scanner::Lex::NAME);
-        if (item.typeOfItem != "const")
+        if (item->typeOfItem != "const")
         {
             errorPtr->contextError("имя модуля");
         }
         else
         {
-            return std::stoi(item.value) * sign;
+            return std::stoi(item->value) * sign;
         }
     }
     else if (scanner.lex == Scanner::Lex::NUM)
@@ -185,12 +199,10 @@ int Parser::constExpresionPrc()
 void Parser::varDeclarationPrc() 
 {
     contextVarPrc();
-    // checkLex(Scanner::Lex::NAME);
     while (scanner.lex == Scanner::Lex::COMMA)
     {
         checkLex(Scanner::Lex::COMMA);
         contextVarPrc();
-        // checkLex(Scanner::Lex::NAME);
     }
 
     checkLex(Scanner::Lex::COLON);
@@ -200,9 +212,9 @@ void Parser::varDeclarationPrc()
 void Parser::typePrc() 
 {
     errorIfNotExpectedLex(Scanner::Lex::NAME);
-    Item item = table.findItem(scanner.nameValue);
+    Item* item = table.findItem(scanner.nameValue);
 
-    if (item.typeOfItem != "type")
+    if (item->typeOfItem != "type")
     {
         errorPtr->contextError("Необьявленное имя типа");
     }
@@ -254,40 +266,40 @@ void Parser::statementsPrc()
 //   | [Имя "."] Имя ["(" Параметр {"," Параметр}] ")"]
 void Parser::variableOrCallPrc()
 {
-    // checkLex(Scanner::Lex::NAME);
     errorIfNotExpectedLex(Scanner::Lex::NAME);
-    Item item = table.findItem(scanner.nameValue);
+    Item* item = table.findItem(scanner.nameValue);
     scanner.nextLex();
 
-    if (item.typeOfItem == "var")
+    if (item->typeOfItem == "var")
     {
+        generateCode.genAddress(*item);
         checkLex(Scanner::Lex::ASS);
         Item::ItemTypes expressionType = expressionPrc();
-        if (item.type != expressionType) 
+        if (item->type != expressionType) 
         {
             errorPtr->contextError("Неверный тип при присваивании");
         }
+        generateCode.genSave();
     }
-    else if (item.typeOfItem == "procedure" || item.typeOfItem == "module")
+    else if (item->typeOfItem == "procedure" || item->typeOfItem == "module")
     {
         if (scanner.lex == Scanner::Lex::DOT)
         {
-            if (item.typeOfItem != "module")
+            if (item->typeOfItem != "module")
             {
                 errorPtr->contextError("Ожидается имя модуля");
             }
             scanner.nextLex();
-            // checkLex(Scanner::Lex::NAME);
             errorIfNotExpectedLex(Scanner::Lex::NAME);
-            std::string procedureName = item.name + "." + scanner.nameValue;
+            std::string procedureName = item->name + "." + scanner.nameValue;
             item = table.findItem(procedureName);
-            if (item.typeOfItem != "procedure")
+            if (item->typeOfItem != "procedure")
             {
                 errorPtr->contextError("Ожидается процедура");
             }
             scanner.nextLex();
         }
-        else if (item.typeOfItem != "procedure")
+        else if (item->typeOfItem != "procedure")
         {
             errorPtr->contextError("Ожидается имя процедуры");
         }
@@ -295,14 +307,17 @@ void Parser::variableOrCallPrc()
         if (scanner.lex == Scanner::Lex::LPAR)
         {
             scanner.nextLex();
-            checkProcParameters(item);
+            checkProcParameters(*item);
             checkLex(Scanner::Lex::RPAR);  
         }
-        else if (item.name != "Out.Ln" && item.name != "In.Open")
+        else if (item->name == "Out.Ln")
+        {
+            generateCode.genOutLn();
+        }
+        else if (item->name != "Out.Ln" && item->name != "In.Open")
         {
             errorPtr->contextError("Ожидается скобка");
         }
-        
     }
     else
     {
@@ -322,25 +337,35 @@ void Parser::ifStatementPrc()
     checkLex(Scanner::Lex::IF);
     Item::ItemTypes expressionType = expressionPrc();
     checkBoolType(expressionType);
+    auto conditionPosition = generateCode.getCmdCounter();
+    int lastGoToPosition = 0;
     checkLex(Scanner::Lex::THEN);
     sequenceStatementsPrc();
 
     while (scanner.lex == Scanner::Lex::ELSIF)
     {
+        generateCode.genGoTo(lastGoToPosition);
+        lastGoToPosition = generateCode.getCmdCounter();
+        generateCode.fillGaps(conditionPosition);
         checkLex(Scanner::Lex::ELSIF);
         expressionType = expressionPrc();
         checkBoolType(expressionType);
+        conditionPosition = generateCode.getCmdCounter();
         checkLex(Scanner::Lex::THEN);
         sequenceStatementsPrc();
     }
 
     if (scanner.lex == Scanner::Lex::ELSE)
     {
+        generateCode.genGoTo(lastGoToPosition);
+        lastGoToPosition = generateCode.getCmdCounter();
         checkLex(Scanner::Lex::ELSE);
         sequenceStatementsPrc();
     }
 
+    generateCode.fillGaps(conditionPosition);
     checkLex(Scanner::Lex::END);
+    generateCode.fillGaps(lastGoToPosition);
 }
 
 //   WHILE Выраж DO
@@ -348,12 +373,16 @@ void Parser::ifStatementPrc()
 //   END
 void Parser::whileStatementPrc()
 {
+    auto whilePosition = generateCode.getCmdCounter();
     checkLex(Scanner::Lex::WHILE);
     Item::ItemTypes expressionType = expressionPrc();
     checkBoolType(expressionType);
+    auto conditionPosition = generateCode.getCmdCounter();
     checkLex(Scanner::Lex::DO);
     sequenceStatementsPrc();
     checkLex(Scanner::Lex::END);
+    generateCode.genGoTo(whilePosition);
+    generateCode.fillGaps(conditionPosition);
 }
 
 // Параметр | Выражение
@@ -375,10 +404,12 @@ Item::ItemTypes Parser::expressionPrc()
         scanner.lex == Scanner::Lex::GT ||
         scanner.lex == Scanner::Lex::GE)
     {
+        auto operation = scanner.lex;
         checkIntType(simpleExpressionType);
         scanner.nextLex();
         simpleExpressionType = simpleExpressionPrc();
         checkIntType(simpleExpressionType);
+        generateCode.genComparison(scanner.getStringNameOfLex(operation));
         return Item::ItemTypes::Boolean;
     }
     else
@@ -394,9 +425,14 @@ Item::ItemTypes Parser::simpleExpressionPrc()
     if (scanner.lex == Scanner::Lex::PLUS ||
         scanner.lex == Scanner::Lex::MINUS)
     {
+        auto operation = scanner.lex;
         scanner.nextLex();
         termType = termPrc();
         checkIntType(termType);
+        if (operation == Scanner::Lex::MINUS)
+        {
+            generateCode.genNegative();
+        }
     }
     else
     {
@@ -411,9 +447,18 @@ Item::ItemTypes Parser::simpleExpressionPrc()
     while (scanner.lex == Scanner::Lex::PLUS ||
             scanner.lex == Scanner::Lex::MINUS)
     {
+        auto operation = scanner.lex;
         scanner.nextLex();
         termType = termPrc();
         checkIntType(termType);
+        if (operation == Scanner::Lex::PLUS)
+        {
+            generateCode.genAddition();
+        }
+        else
+        {
+            generateCode.genSubstraction();
+        }
     }
 
     return termType;
@@ -436,9 +481,11 @@ Item::ItemTypes Parser::termPrc()
             scanner.lex == Scanner::Lex::MOD ||
             scanner.lex == Scanner::Lex::MULT)
     {
+        auto operation = scanner.lex;
         scanner.nextLex();
         multiplierType = multiplierPrc();
         checkIntType(multiplierType);
+        generateCode.genOperation(scanner.getStringNameOfLex(operation));
     }
 
     return multiplierType;
@@ -451,20 +498,26 @@ Item::ItemTypes Parser::multiplierPrc()
 {
     if (scanner.lex == Scanner::Lex::NAME)
     {
-        Item item = table.findItem(scanner.nameValue);
-        if (item.typeOfItem == "const" ||
-            item.typeOfItem == "var")
+        Item* item = table.findItem(scanner.nameValue);
+        if (item->typeOfItem == "const")
         {
+            generateCode.genConst(std::stoi(item->value));
             scanner.nextLex();
-            return item.type;
+            return item->type;
         }
-        else if (item.typeOfItem == "function")
+        else if (item->typeOfItem == "var")
+        {
+            generateCode.genVar(*item);
+            scanner.nextLex();
+            return item->type;
+        }
+        else if (item->typeOfItem == "function")
         {
             scanner.nextLex();
             checkLex(Scanner::Lex::LPAR);
-            checkFuncParameters(item);
+            checkFuncParameters(*item);
             checkLex(Scanner::Lex::RPAR);
-            return item.type;
+            return item->type;
         }
         else
         {
@@ -473,6 +526,7 @@ Item::ItemTypes Parser::multiplierPrc()
     }
     else if (scanner.lex == Scanner::Lex::NUM)
     {
+        generateCode.gen(scanner.numValue);
         scanner.nextLex();
         return Item::ItemTypes::Integer;
     }
@@ -488,7 +542,6 @@ Item::ItemTypes Parser::multiplierPrc()
         errorPtr->syntaxError("Имя, число или '('");
     }
 
-    // заглушка !!!!
     return Item::ItemTypes::Integer;
 }
 
@@ -510,45 +563,52 @@ void Parser::contextImportPrc()
 void Parser::contextVarPrc()
 {
     errorIfNotExpectedLex(Scanner::Lex::NAME);
-    table.newItem(table.varItem(scanner.nameValue, Item::ItemTypes::Integer, ""));
+    table.newItem(table.varItem(scanner.nameValue, Item::ItemTypes::Integer, "0"));
     scanner.nextLex();
 }
 
 void Parser::checkProcParameters(Item item) 
 {
-    // if (scanner.lex != Scanner::Lex::RPAR)
-    // {
-    //     parameterPrc();
-    //     while (scanner.lex == Scanner::Lex::COMMA)
-    //     {
-    //         scanner.nextLex();
-    //         parameterPrc();
-    //     }
-    // }
-
     if (item.name == "HALT")
     {
-        constExpresionPrc();
+        int value = constExpresionPrc();
+        generateCode.genHalt(value);
     }
     else if (item.name == "INC")
     {
         errorIsNotVariable();
+        generateCode.genDup();
+        generateCode.genLoad();
         if (scanner.lex == Scanner::Lex::COMMA)
         {
             scanner.nextLex();
             Item::ItemTypes expressionType = expressionPrc();
             checkIntType(expressionType);
         }
+        else
+        {
+            generateCode.gen(1);
+        }
+        generateCode.genAddition();
+        generateCode.genSave();
     }
     else if (item.name == "DEC")
     {  
         errorIsNotVariable();
+        generateCode.genDup();
+        generateCode.genLoad();
         if (scanner.lex == Scanner::Lex::COMMA)
         {
             scanner.nextLex();
             Item::ItemTypes expressionType = expressionPrc();
             checkIntType(expressionType);
         }
+        else
+        {
+            generateCode.gen(1);
+        }
+        generateCode.genSubstraction();
+        generateCode.genSave();
     }
     else if (item.name == "In.Open")
     {
@@ -557,6 +617,7 @@ void Parser::checkProcParameters(Item item)
     else if (item.name == "In.Int")
     {
         errorIsNotVariable();
+        generateCode.genInInt();
     }
     else if (item.name == "Out.Int")
     {
@@ -565,10 +626,11 @@ void Parser::checkProcParameters(Item item)
         checkLex(Scanner::Lex::COMMA);
         expressionType = expressionPrc();
         checkIntType(expressionType);
+        generateCode.genOutInt();
     }
     else if (item.name == "Out.Ln")
     {
-        // skip
+        generateCode.genOutLn();
     }
     else 
     {
@@ -582,19 +644,23 @@ void Parser::checkFuncParameters(Item item)
     {
         Item::ItemTypes expressionType = expressionPrc();
         checkIntType(expressionType);
+        generateCode.genFunc("ABS");
     }
     else if (item.name == "MIN")
     {
         typePrc();
+        generateCode.genFunc("MIN");
     }
     else if (item.name == "MAX")
     {
         typePrc();
+        generateCode.genFunc("MAX");
     }
     else if (item.name == "ODD")
     {
         Item::ItemTypes expressionType = expressionPrc();
         checkIntType(expressionType);
+        generateCode.genFunc("ODD");
     }
     else
     {
@@ -642,12 +708,14 @@ void Parser::checkBoolType(Item::ItemTypes type)
 
 void Parser::errorIsNotVariable() {
     errorIfNotExpectedLex(Scanner::Lex::NAME);
-    Item paramItem = table.findItem(scanner.nameValue);
+    Item* paramItem = table.findItem(scanner.nameValue);
 
-    if (paramItem.typeOfItem != "var") 
+    if (paramItem->typeOfItem != "var") 
     {
         errorPtr->contextError("Ожидается имя переменной");
     }
+
+    generateCode.genAddress(*paramItem);
 
     scanner.nextLex();
 }

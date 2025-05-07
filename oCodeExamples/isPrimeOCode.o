@@ -44,7 +44,10 @@ BEGIN
                                     (* 29) LOAD; n *)
                                     (* 30) 0; n, 0 *)
                                     (* 31) OUT; Стек пуст *)
-
+  ELSIF d > n THEN
+    Out.Int(n, 0)
+  ELSIF d < n THEN
+    Out.Int(n, 0)
   ELSE                              (* 32) 37; 37 *)
                                     (* 33) GOTO; Стек пуст *)
 

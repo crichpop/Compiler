@@ -31,7 +31,7 @@ void OVM::run()
             sp++;
             memory[sp] = memory[sp] - memory[sp-1];
         }
-        else if (cmd == OVM::MUL)
+        else if (cmd == OVM::MULT)
         {
             sp++;
             memory[sp] = memory[sp] * memory[sp-1];
@@ -227,4 +227,35 @@ void OVM::test_input()
 
     memory[i++] = OVM::LN;
     memory[i++] = OVM::STOP;
+}
+
+std::vector<int>& OVM::getMemory()
+{
+    return memory;
+}
+
+std::string OVM::operation_to_string(int operation)
+{
+    auto it = operationToString.find(operation);
+    if (it != operationToString.end()) {
+        return it->second;
+    }
+    return "ERROR";
+}
+
+void OVM::printCode(int cmdCounter) 
+{
+    for (int i = 0; i <= cmdCounter; i++)
+    {
+        std::cout << i << ") ";
+        if (memory[i] >= 0) 
+        {
+            std::cout << memory[i] << std::endl;
+        }
+        else
+        {
+            std::cout << operation_to_string(memory[i]) << std::endl;
+        }
+    }
+    
 }
