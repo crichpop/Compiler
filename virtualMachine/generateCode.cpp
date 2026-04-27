@@ -22,8 +22,8 @@ void GenerateCode::genConst(int constValue)
     }
     else 
     {
+        gen(-constValue);
         gen(ovm.NEG);
-        gen(constValue);
     }
 }
 
@@ -42,10 +42,10 @@ void GenerateCode::genAddress(Item& item)
 void GenerateCode::genFunc(std::string func)
 {
     if (func == "ABS")
-    {
+    {                       // x
         gen(ovm.DUP);       // x, x
         gen(0);             // x, x, 0
-        gen(cmdCounter+3);  // x, x, 0, Addr
+        gen(cmdCounter+3);  // x, x, 0, Addr   // cmdCounter+3 = переход на позицию после NEG
         gen(ovm.IFGE);      // x
         gen(ovm.NEG);       // -x
     }
@@ -61,7 +61,7 @@ void GenerateCode::genFunc(std::string func)
         gen(ovm.SUB);
     }
     else if (func == "ODD")
-    {
+    {                   // x
         gen(2);         // x, 2
         gen(ovm.MOD);   // x MOD 2
         gen(0);         // x MOD 2, 0
@@ -174,13 +174,13 @@ void GenerateCode::genGoTo(int code)
     gen(ovm.GOTO);
 }
 
-void GenerateCode::fillGaps(int to)
+void GenerateCode::fillGaps(int addrWithGaps)
 {
-    while (to > 0)
+    while (addrWithGaps > 0)
     {
-        auto tmp = ovm.getMemory()[to-2];
-        ovm.getMemory()[to-2] = cmdCounter;
-        to = tmp;
+        auto tmp = ovm.getMemory()[addrWithGaps-2];
+        ovm.getMemory()[addrWithGaps-2] = cmdCounter;
+        addrWithGaps = tmp;
     }
 }
 

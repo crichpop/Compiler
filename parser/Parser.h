@@ -47,4 +47,3 @@ private:
     void checkBoolType(Item::ItemTypes type);
     void errorIsNotVariable();
 };
-

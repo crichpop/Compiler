@@ -1,11 +1,16 @@
 #include "iostream"
 #include "Item.h"
+#include "vector"
+#include "unordered_map"
 
 #pragma once
 
 class TableOfName
 {
 public:
+
+    TableOfName() = default;
+
     void openScope();
     void closeScope();
     void addItem(const Item& item);

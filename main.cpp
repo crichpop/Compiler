@@ -3,8 +3,6 @@
 #include "parser/Parser.h"
 #include "error/Error.h"
 #include "scanner/Scanner.h"
-#include "virtualMachine/ovm.h"
-#include "virtualMachine/generateCode.h"
 
 int main(int argc, char const *argv[])
 {   
@@ -23,7 +21,7 @@ int main(int argc, char const *argv[])
     Parser parser(scanner, errorPtr);
     parser.compile();
 
-    std::cout << "Скомпилировано";
+    std::cout << std::endl << "Скомпилировано" << std::endl;
 
     return 0;
 }

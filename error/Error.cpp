@@ -17,7 +17,7 @@ void Error::skip(const unsigned int position)
         driver.nextCh();
     }
 
-    std::cout << std::string((position == 0) ? position : (position - 1), ' ') << '^' << std::endl;
+    std::cout << std::endl << std::string((position == 0) ? position : (position - 1), ' ') << '^' << std::endl;
 }
 
 void Error::lexError(const std::string msg) 
@@ -30,13 +30,13 @@ void Error::lexError(const std::string msg)
 void Error::syntaxError(const std::string msg) 
 {
     skip(Scanner::lexPosition);
-    std::cout << "Ожидается: " << msg << std::endl;
+    std::cout << "Ожидается: " + msg << std::endl;
     exit(0);
 }
 
 void Error::contextError(const std::string msg) 
 {
     skip(Scanner::lexPosition);
-    std::cout << msg << std::endl;
+    std::cout << "Контекстная ошибка: " + msg << std::endl;
     exit(0);
 }

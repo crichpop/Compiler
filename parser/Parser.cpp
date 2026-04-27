@@ -7,6 +7,7 @@
 #include "../virtualMachine/generateCode.h"
 
 #include <string>
+#include <algorithm>
 
 Parser::Parser(Scanner &scanner, std::shared_ptr<Error> errorPtr) : 
     scanner(scanner), table(), errorPtr(std::move(errorPtr)), generateCode() {
@@ -194,6 +195,8 @@ int Parser::constExpresionPrc()
     {
         errorPtr->syntaxError("имя константы или число");
     }
+
+    return 0;
 }
 
 void Parser::varDeclarationPrc() 
@@ -207,6 +210,13 @@ void Parser::varDeclarationPrc()
 
     checkLex(Scanner::Lex::COLON);
     typePrc();
+}
+
+void Parser::contextVarPrc()
+{
+    errorIfNotExpectedLex(Scanner::Lex::NAME);
+    table.newItem(table.varItem(scanner.nameValue, Item::ItemTypes::Integer, "0"));
+    scanner.nextLex();
 }
 
 void Parser::typePrc() 
@@ -316,6 +326,7 @@ void Parser::variableOrCallPrc()
         }
         else if (item->name != "Out.Ln" && item->name != "In.Open")
         {
+            // Скобки могут не быть только после Out.Ln или In.Open
             errorPtr->contextError("Ожидается скобка");
         }
     }
@@ -337,33 +348,44 @@ void Parser::ifStatementPrc()
     checkLex(Scanner::Lex::IF);
     Item::ItemTypes expressionType = expressionPrc();
     checkBoolType(expressionType);
-    auto conditionPosition = generateCode.getCmdCounter();
-    int lastGoToPosition = 0;
     checkLex(Scanner::Lex::THEN);
+
+    int afterConditionPosition = generateCode.getCmdCounter();
+    int lastGoToPosition = 0;
+
     sequenceStatementsPrc();
 
     while (scanner.lex == Scanner::Lex::ELSIF)
     {
         generateCode.genGoTo(lastGoToPosition);
         lastGoToPosition = generateCode.getCmdCounter();
-        generateCode.fillGaps(conditionPosition);
+        generateCode.fillGaps(afterConditionPosition); // Переход на ELSE IF с предыдущего IF
+
         checkLex(Scanner::Lex::ELSIF);
         expressionType = expressionPrc();
         checkBoolType(expressionType);
-        conditionPosition = generateCode.getCmdCounter();
         checkLex(Scanner::Lex::THEN);
+
+        afterConditionPosition = generateCode.getCmdCounter();
+
         sequenceStatementsPrc();
     }
 
     if (scanner.lex == Scanner::Lex::ELSE)
     {
         generateCode.genGoTo(lastGoToPosition);
-        lastGoToPosition = generateCode.getCmdCounter();
+        lastGoToPosition = generateCode.getCmdCounter();  // 32
+        generateCode.fillGaps(afterConditionPosition); // Переход на ELSE с предыдущего IF
+
         checkLex(Scanner::Lex::ELSE);
         sequenceStatementsPrc();
+    } 
+    else
+    {
+        // Если нет ELSE, то генерировать GoTo не надо
+        generateCode.fillGaps(afterConditionPosition); // Переход на позицию после END с предыдущего IF
     }
 
-    generateCode.fillGaps(conditionPosition);
     checkLex(Scanner::Lex::END);
     generateCode.fillGaps(lastGoToPosition);
 }
@@ -373,16 +395,20 @@ void Parser::ifStatementPrc()
 //   END
 void Parser::whileStatementPrc()
 {
-    auto whilePosition = generateCode.getCmdCounter();
+    auto whilePosition = generateCode.getCmdCounter(); // 6
+
     checkLex(Scanner::Lex::WHILE);
     Item::ItemTypes expressionType = expressionPrc();
     checkBoolType(expressionType);
-    auto conditionPosition = generateCode.getCmdCounter();
+
+    auto afterConditionPosition = generateCode.getCmdCounter(); // 14
+
     checkLex(Scanner::Lex::DO);
     sequenceStatementsPrc();
     checkLex(Scanner::Lex::END);
-    generateCode.genGoTo(whilePosition);
-    generateCode.fillGaps(conditionPosition);
+
+    generateCode.genGoTo(whilePosition); // 6
+    generateCode.fillGaps(afterConditionPosition);  // conditionPosition = первая позиция после условного выржения (IFEQ). Значит нам нужно заполнить значение по адресу conditionPosition - 2
 }
 
 // Параметр | Выражение
@@ -468,7 +494,7 @@ Item::ItemTypes Parser::simpleExpressionPrc()
 Item::ItemTypes Parser::termPrc()
 {
     Item::ItemTypes multiplierType;
-    multiplierType = multiplierPrc();
+    multiplierType = multiplierPrc(); // Может быть ODD с типом Boolean
 
     if (scanner.lex == Scanner::Lex::DIV ||
             scanner.lex == Scanner::Lex::MOD ||
@@ -560,13 +586,6 @@ void Parser::contextImportPrc()
     scanner.nextLex();
 }
 
-void Parser::contextVarPrc()
-{
-    errorIfNotExpectedLex(Scanner::Lex::NAME);
-    table.newItem(table.varItem(scanner.nameValue, Item::ItemTypes::Integer, "0"));
-    scanner.nextLex();
-}
-
 void Parser::checkProcParameters(Item item) 
 {
     if (item.name == "HALT")
@@ -577,7 +596,7 @@ void Parser::checkProcParameters(Item item)
     else if (item.name == "INC")
     {
         errorIsNotVariable();
-        generateCode.genDup();
+        generateCode.genDup(); // Чтобы был адрес для сохранения значения при SAVE
         generateCode.genLoad();
         if (scanner.lex == Scanner::Lex::COMMA)
         {

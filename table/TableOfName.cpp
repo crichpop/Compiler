@@ -1,6 +1,7 @@
 #include "TableOfName.h"
 #include "../error/Error.h"
 #include "Item.h"
+#include <memory>
 
 void TableOfName::openScope()
 {

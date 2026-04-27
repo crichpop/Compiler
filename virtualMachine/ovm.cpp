@@ -245,6 +245,7 @@ std::string OVM::operation_to_string(int operation)
 
 void OVM::printCode(int cmdCounter) 
 {
+    std::cout << std::endl;
     for (int i = 0; i <= cmdCounter; i++)
     {
         std::cout << i << ") ";

@@ -2,6 +2,7 @@
 #include <string>
 #include "../sourceCodeDriver/Driver.h"
 #include "../error/Error.h"
+#include "climits"
 
 Scanner::Lex Scanner::lex = Scanner::Lex::NONE;
 std::string Scanner::nameValue = "";
@@ -15,24 +16,31 @@ Scanner::Scanner(Driver &driver, std::shared_ptr<Error> errorPtr) :
 
 void Scanner::nextLex()
 {
-    while (Driver::ch == Driver::chSpace || 
-        Driver::ch == Driver::chTab || 
-        Driver::ch == Driver::chEOL)
+    while (
+        Driver::ch == Driver::chSpace ||
+        Driver::ch == Driver::chTab ||
+        Driver::ch == Driver::chEOL
+    )
     {
         driver.nextCh();
     }
 
     Scanner::lexPosition = Driver::position;
 
-    if (Driver::ch >= 'A' && Driver::ch <= 'Z' || Driver::ch >= 'a' && Driver::ch <= 'z') 
+    if (
+        Driver::ch >= 'A' && Driver::ch <= 'Z' ||
+        Driver::ch >= 'a' && Driver::ch <= 'z'
+    )
     {
-        scanName();
+        Scanner::scanName();
     }
-    else if (Driver::ch >= '0' && Driver::ch <= '9')
+    else if (
+        Driver::ch >= '0' && Driver::ch <= '9'
+    ) 
     {
-        scanNumber();
+        Scanner::scanNum();
     }
-    else if (Driver::ch == ';')
+    else if (Driver::ch == ';') 
     {
         lex = Lex::SEMI;
         driver.nextCh();
@@ -44,7 +52,7 @@ void Scanner::nextLex()
         {
             lex = Lex::ASS;
             driver.nextCh();
-        } 
+        }
         else
         {
             lex = Lex::COLON;
@@ -70,11 +78,7 @@ void Scanner::nextLex()
         lex = Lex::MINUS;
         driver.nextCh();
     }
-    else if (Driver::ch == '*')
-    {
-        lex = Lex::MULT;
-        driver.nextCh();
-    }
+    // (* комментарий *)
     else if (Driver::ch == '(')
     {
         driver.nextCh();
@@ -82,7 +86,7 @@ void Scanner::nextLex()
         {
             skipComment();
             nextLex();
-        } 
+        }
         else
         {
             lex = Lex::LPAR;
@@ -93,14 +97,14 @@ void Scanner::nextLex()
         lex = Lex::RPAR;
         driver.nextCh();
     }
-    else if (Driver::ch == '=')
-    {
-        lex = Lex::EQ;
-        driver.nextCh();
-    }
     else if (Driver::ch == '#')
     {
         lex = Lex::NE;
+        driver.nextCh();
+    }
+    else if (Driver::ch == '=')
+    {
+        lex = Lex::EQ;
         driver.nextCh();
     }
     else if (Driver::ch == '<')
@@ -110,7 +114,7 @@ void Scanner::nextLex()
         {
             lex = Lex::LE;
             driver.nextCh();
-        } 
+        }
         else
         {
             lex = Lex::LT;
@@ -123,61 +127,61 @@ void Scanner::nextLex()
         {
             lex = Lex::GE;
             driver.nextCh();
-        } 
+        }
         else
         {
             lex = Lex::GT;
         }
     }
-    else if (Driver::ch == Driver::chEOT) 
+    else if (Driver::ch == Driver::chEOT)
     {
         lex = Lex::EOT;
     }
-    else
+    else 
     {
         errorPtr->lexError("Недопустимый символ");
     }
 }
 
-void Scanner::scanName()
+void Scanner::scanName() 
 {
     nameValue = "";
 
-    while (Driver::ch >= 'A' && Driver::ch <= 'Z' || 
+    while (
+        Driver::ch >= 'A' && Driver::ch <= 'Z' ||
         Driver::ch >= 'a' && Driver::ch <= 'z' ||
-        Driver::ch > '0' && Driver::ch < '9')
+        Driver::ch >= '0' && Driver::ch <= '9'
+    )
     {
         nameValue.push_back(Driver::ch);
         driver.nextCh();
     }
 
-    // std::cout << nameValue;
+    // std::cout << ">" << nameValue << "<";
 
     auto it = lexTable.find(nameValue);
-    lex = (it != lexTable.end()) ? it->second : Lex::NAME;
-    
+    Scanner::lex = (it != lexTable.end()) ? it->second : Lex::NAME;
 }
 
-void Scanner::scanNumber()
+void Scanner::scanNum()
 {
-    numValue = 0;
+    Scanner::numValue = 0;
 
     while (Driver::ch >= '0' && Driver::ch <= '9')
     {
         int digit = Driver::ch - '0';
-        if (numValue <= (INT_MAX - digit) / 10)
+        if (Scanner::numValue <= (INT_MAX - digit) / 10) 
         {
             numValue = numValue * 10 + digit;
-        } 
+        }
         else 
         {
-            errorPtr->lexError("Число превышает максимально возможное");
+            errorPtr->lexError("Переполнение");
         }
-
         driver.nextCh();
     }
 
-    lex = Lex::NUM;
+    Scanner::lex = Lex::NUM;
 }
 
 void Scanner::skipComment()
@@ -216,10 +220,8 @@ void Scanner::skipComment()
     driver.nextCh();
 }
 
-std::string Scanner::getStringNameOfLex(Scanner::Lex lex) 
-{
-    auto it = lexToStr.find(lex);
-    std::string name = (it != lexToStr.end()) ? it->second : "лексема не найдена"; 
-
+std::string Scanner::getStringNameOfLex(Scanner::Lex lex) {
+    auto it = lexToString.find(lex);
+    std::string name = (it != lexToString.end()) ? it->second : "лексема не найдена";
     return name;
 }

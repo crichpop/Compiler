@@ -51,9 +51,9 @@ public:
     Scanner(Driver &driver, std::shared_ptr<Error> errorPtr);
     void nextLex();
     void scanName();
-    void scanNumber();
+    void scanNum();
     void skipComment();
-    std::string getStringNameOfLex(Scanner::Lex lex);
+    std::string getStringNameOfLex(Scanner::Lex);
 
 private:
     Driver driver;
@@ -98,7 +98,7 @@ private:
         {"RETURN", Lex::NONE},
     };
 
-    std::unordered_map<Lex, std::string> lexToStr = {
+    std::unordered_map<Lex, std::string> lexToString = {
         {Lex::NAME, "имя"},
         {Lex::NUM, "число"},
 
@@ -131,7 +131,7 @@ private:
         {Lex::COLON, ":"},
         {Lex::SEMI, ";"},
         {Lex::ASS, ":="},
-        {Lex::LPAR, "("},
+        {Lex::LPAR, "(имя)"},
         {Lex::RPAR, ")"},
         {Lex::EOT, "конец текста"}
     };
