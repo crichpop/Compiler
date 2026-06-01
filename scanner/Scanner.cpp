@@ -78,6 +78,11 @@ void Scanner::nextLex()
         lex = Lex::MINUS;
         driver.nextCh();
     }
+    else if (Driver::ch == '*')
+    {
+        lex = Lex::MULT;
+        driver.nextCh();
+    }
     // (* комментарий *)
     else if (Driver::ch == '(')
     {

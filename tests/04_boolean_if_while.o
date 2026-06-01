@@ -1,0 +1,9 @@
+MODULE T;
+VAR b, x: BOOLEAN;
+BEGIN
+  b := TRUE;
+  x := FALSE;
+  WHILE b = x DO
+  x := 1;
+  END;
+END T.

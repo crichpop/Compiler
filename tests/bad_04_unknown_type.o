@@ -1,0 +1,4 @@
+MODULE T;
+VAR x: REAL;
+BEGIN
+END T.

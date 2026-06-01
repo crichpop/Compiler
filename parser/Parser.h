@@ -25,7 +25,7 @@ private:
     void varDeclarationPrc();
     void statementsPrc();
     void variableOrCallPrc();
-    void typePrc();
+    Item::ItemTypes typePrc();
     void ifStatementPrc();
     void whileStatementPrc();
     void parameterPrc();
@@ -37,9 +37,9 @@ private:
     void loccateVariables();
 
     void contextImportPrc();
-    void contextVarPrc();
     void checkProcParameters(Item item);
     void checkFuncParameters(Item item);
+    void checkCondition();
 
     void checkLex(Scanner::Lex lex);
     void errorIfNotExpectedLex(Scanner::Lex lex);

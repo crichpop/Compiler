@@ -1,0 +1,6 @@
+MODULE T;
+VAR x: INTEGER; b: BOOLEAN;
+BEGIN
+  x := 5;
+  b := ODD(x)
+END T.

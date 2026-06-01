@@ -1,0 +1,5 @@
+MODULE T;
+VAR b: BOOLEAN;
+BEGIN
+  b := TRUE
+END T.

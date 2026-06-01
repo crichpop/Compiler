@@ -19,6 +19,7 @@ public:
     void genAddition();
     void genSubstraction();
     void genComparison(std::string operation);
+    void genIfFalse();
     void genHalt(int exitCode);
     void genInInt();
     void genOutInt();

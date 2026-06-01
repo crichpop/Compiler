@@ -1,0 +1,8 @@
+MODULE T;
+VAR x: INTEGER; b: BOOLEAN;
+BEGIN
+  x := 3;
+  b := TRUE;
+  IF x > 3 THEN
+  END;
+END T.

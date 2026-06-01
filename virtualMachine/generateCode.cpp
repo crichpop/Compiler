@@ -61,12 +61,11 @@ void GenerateCode::genFunc(std::string func)
         gen(ovm.SUB);
     }
     else if (func == "ODD")
-    {                   // x
-        gen(2);         // x, 2
-        gen(ovm.MOD);   // x MOD 2
-        gen(0);         // x MOD 2, 0
-        gen(0);         // x MOD 2, 0 , Addr - временно 0
-        gen(ovm.IFEQ);
+    {
+        gen(2);
+        gen(ovm.MOD);
+        gen(0);
+        genComparison("#");
     }
 }
 
@@ -140,7 +139,8 @@ void GenerateCode::genOutLn()
 
 void GenerateCode::genComparison(std::string operation)
 {
-    gen(0);         // Addr - временный
+    int falsePosition = cmdCounter;
+    gen(0);
 
     if (operation == "=")
     {
@@ -166,6 +166,22 @@ void GenerateCode::genComparison(std::string operation)
     {
         gen(ovm.IFLT);
     }
+
+    gen(1);
+
+    int afterPosition = cmdCounter;
+    genGoTo(0);
+
+    ovm.getMemory()[falsePosition] = cmdCounter;
+    gen(0);
+    ovm.getMemory()[afterPosition] = cmdCounter;
+}
+
+void GenerateCode::genIfFalse()
+{
+    gen(0);
+    gen(0);
+    gen(ovm.IFEQ);
 }
 
 void GenerateCode::genGoTo(int code)

@@ -8,6 +8,7 @@
 
 #include <string>
 #include <algorithm>
+#include <vector>
 
 Parser::Parser(Scanner &scanner, std::shared_ptr<Error> errorPtr) : 
     scanner(scanner), table(), errorPtr(std::move(errorPtr)), generateCode() {
@@ -31,6 +32,9 @@ void Parser::compile()
     table.addItem(table.procedureItem("Out.Ln"));
 
     table.addItem(table.typeItem("INTEGER", Item::ItemTypes::Integer));
+    table.addItem(table.typeItem("BOOLEAN", Item::ItemTypes::Boolean));
+    table.addItem(table.constItem("TRUE", Item::ItemTypes::Boolean, "1"));
+    table.addItem(table.constItem("FALSE", Item::ItemTypes::Boolean, "0"));
     
     table.openScope(); // Блок модуля
 
@@ -201,25 +205,30 @@ int Parser::constExpresionPrc()
 
 void Parser::varDeclarationPrc() 
 {
-    contextVarPrc();
+    std::vector<std::string> names;
+
+    errorIfNotExpectedLex(Scanner::Lex::NAME);
+    names.push_back(scanner.nameValue);
+    scanner.nextLex();
+
     while (scanner.lex == Scanner::Lex::COMMA)
     {
         checkLex(Scanner::Lex::COMMA);
-        contextVarPrc();
+        errorIfNotExpectedLex(Scanner::Lex::NAME);
+        names.push_back(scanner.nameValue);
+        scanner.nextLex();
     }
 
     checkLex(Scanner::Lex::COLON);
-    typePrc();
+    Item::ItemTypes type = typePrc();
+
+    for (std::string name : names)
+    {
+        table.newItem(table.varItem(name, type, "0"));
+    }
 }
 
-void Parser::contextVarPrc()
-{
-    errorIfNotExpectedLex(Scanner::Lex::NAME);
-    table.newItem(table.varItem(scanner.nameValue, Item::ItemTypes::Integer, "0"));
-    scanner.nextLex();
-}
-
-void Parser::typePrc() 
+Item::ItemTypes Parser::typePrc() 
 {
     errorIfNotExpectedLex(Scanner::Lex::NAME);
     Item* item = table.findItem(scanner.nameValue);
@@ -230,6 +239,7 @@ void Parser::typePrc()
     }
 
     scanner.nextLex();
+    return item->type;
 }
 
 void Parser::sequenceStatementsPrc() 
@@ -348,6 +358,7 @@ void Parser::ifStatementPrc()
     checkLex(Scanner::Lex::IF);
     Item::ItemTypes expressionType = expressionPrc();
     checkBoolType(expressionType);
+    checkCondition();
     checkLex(Scanner::Lex::THEN);
 
     int afterConditionPosition = generateCode.getCmdCounter();
@@ -364,6 +375,7 @@ void Parser::ifStatementPrc()
         checkLex(Scanner::Lex::ELSIF);
         expressionType = expressionPrc();
         checkBoolType(expressionType);
+        checkCondition();
         checkLex(Scanner::Lex::THEN);
 
         afterConditionPosition = generateCode.getCmdCounter();
@@ -400,6 +412,7 @@ void Parser::whileStatementPrc()
     checkLex(Scanner::Lex::WHILE);
     Item::ItemTypes expressionType = expressionPrc();
     checkBoolType(expressionType);
+    checkCondition();
 
     auto afterConditionPosition = generateCode.getCmdCounter(); // 14
 
@@ -431,10 +444,20 @@ Item::ItemTypes Parser::expressionPrc()
         scanner.lex == Scanner::Lex::GE)
     {
         auto operation = scanner.lex;
-        checkIntType(simpleExpressionType);
         scanner.nextLex();
-        simpleExpressionType = simpleExpressionPrc();
-        checkIntType(simpleExpressionType);
+        Item::ItemTypes secondSimpleExpressionType = simpleExpressionPrc();
+        if (operation == Scanner::Lex::EQ || operation == Scanner::Lex::NE)
+        {
+            if (simpleExpressionType != secondSimpleExpressionType)
+            {
+                errorPtr->contextError("Несовместимые типы при сравнении");
+            }
+        }
+        else
+        {
+            checkIntType(simpleExpressionType);
+            checkIntType(secondSimpleExpressionType);
+        }
         generateCode.genComparison(scanner.getStringNameOfLex(operation));
         return Item::ItemTypes::Boolean;
     }
@@ -667,12 +690,12 @@ void Parser::checkFuncParameters(Item item)
     }
     else if (item.name == "MIN")
     {
-        typePrc();
+        checkIntType(typePrc());
         generateCode.genFunc("MIN");
     }
     else if (item.name == "MAX")
     {
-        typePrc();
+        checkIntType(typePrc());
         generateCode.genFunc("MAX");
     }
     else if (item.name == "ODD")
@@ -723,6 +746,11 @@ void Parser::checkBoolType(Item::ItemTypes type)
     {
         errorPtr->contextError("Ожидается логический тип");
     }
+}
+
+void Parser::checkCondition()
+{
+    generateCode.genIfFalse();
 }
 
 void Parser::errorIsNotVariable() {
