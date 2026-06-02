@@ -444,10 +444,23 @@ Item::ItemTypes Parser::expressionPrc()
         scanner.lex == Scanner::Lex::GE)
     {
         auto operation = scanner.lex;
-        scanner.nextLex();
-        Item::ItemTypes secondSimpleExpressionType = simpleExpressionPrc();
         if (operation == Scanner::Lex::EQ || operation == Scanner::Lex::NE)
         {
+            scanner.nextLex();
+            if (scanner.lex == Scanner::Lex::NUM && simpleExpressionType != Item::ItemTypes::Integer)
+            {
+                errorPtr->contextError("Несовместимые типы при сравнении");
+            }
+            else if (scanner.lex == Scanner::Lex::NAME)
+            {
+                Item* item = table.findItem(scanner.nameValue);
+                if ((item->typeOfItem == "const" || item->typeOfItem == "var" || item->typeOfItem == "function") &&
+                    simpleExpressionType != item->type)
+                {
+                    errorPtr->contextError("Несовместимые типы при сравнении");
+                }
+            }
+            Item::ItemTypes secondSimpleExpressionType = simpleExpressionPrc();
             if (simpleExpressionType != secondSimpleExpressionType)
             {
                 errorPtr->contextError("Несовместимые типы при сравнении");
@@ -456,6 +469,8 @@ Item::ItemTypes Parser::expressionPrc()
         else
         {
             checkIntType(simpleExpressionType);
+            scanner.nextLex();
+            Item::ItemTypes secondSimpleExpressionType = simpleExpressionPrc();
             checkIntType(secondSimpleExpressionType);
         }
         generateCode.genComparison(scanner.getStringNameOfLex(operation));

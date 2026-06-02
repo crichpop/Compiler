@@ -1,0 +1,9 @@
+MODULE T;
+VAR a: BOOLEAN; b: BOOLEAN; x: INTEGER;
+BEGIN
+  a := TRUE;
+  b := TRUE;
+  IF a = b THEN
+    x := 1
+  END
+END T.

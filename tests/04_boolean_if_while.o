@@ -4,6 +4,6 @@ BEGIN
   b := TRUE;
   x := FALSE;
   WHILE b = x DO
-  x := 1;
+  x := TRUE;
   END;
 END T.

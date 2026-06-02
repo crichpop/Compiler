@@ -9,4 +9,3 @@ COPY . .
 RUN cmake -S . -B build && cmake --build build
 
 ENTRYPOINT ["./build/Compiler"]
-CMD ["tests/01_integer.o"]

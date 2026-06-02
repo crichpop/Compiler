@@ -1,0 +1,6 @@
+MODULE T;
+VAR a: BOOLEAN; r: BOOLEAN;
+BEGIN
+  a := TRUE;
+  r := a = 1
+END T.

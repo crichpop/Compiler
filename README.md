@@ -19,6 +19,10 @@ cmake --build build
 ./build/Compiler tests/03_boolean_comparison.o
 ./build/Compiler tests/04_boolean_if_while.o
 ./build/Compiler tests/05_odd.o
+./build/Compiler tests/06_boolean_equal.o
+./build/Compiler tests/07_boolean_not_equal.o
+./build/Compiler tests/08_boolean_equal_if.o
+./build/Compiler tests/09_boolean_not_equal_if.o
 ```
 
 ## Ожидаемые ошибки
@@ -30,6 +34,8 @@ cmake --build build
 ./build/Compiler tests/bad_02_boolean_to_integer.o
 ./build/Compiler tests/bad_03_boolean_arithmetic.o
 ./build/Compiler tests/bad_04_unknown_type.o
+./build/Compiler tests/bad_05_boolean_less.o
+./build/Compiler tests/bad_06_boolean_integer_equal.o
 ```
 
 Если компилятор показывает сообщение об ошибке, это правильное поведение.
